@@ -1,13 +1,15 @@
 package io.hhplus.tdd.point;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
 
@@ -18,20 +20,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class PointControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private PointService pointService;
+
+    @InjectMocks
+    private PointController pointController;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(pointController).build();
+    }
 
     /**
      * 포인트 조회 API 테스트
-     * 주어진 userId를 사용하여 Mock 데이터를 설정하고, mockMvc 를 통해 API 엔드포인트를 호출하여
-     * 특정 유저의 포인트 정보를 올바르게 반환하는지 확인
+     * 주어진 userId로 Mock 데이터를 설정하고,
+     * MockMvc 를 통해 API 엔드포인트를 호출하여 반환된 JSON 응답을 검증
      * given: 특정 조건 설정, when: 실제 동작을 수행, then: 기대하는 결과 검증
      */
     @Test
@@ -55,8 +63,8 @@ class PointControllerTest {
 
     /**
      * 포인트 충전/이용 내역 조회 API 테스트
-     * 주어진 userId를 사용하여 Mock 데이터를 설정하고, mockMvc 를 통해 API 엔드포인트를 호출하여
-     * 특정 유저의 포인트 내역을 올바르게 반환하는지 확인
+     * 주어진 userId로 Mock 데이터를 설정하고,
+     * MockMvc 를 통해 API 엔드포인트를 호출하여 반환된 JSON 배열 형식의 응답을 검증
      */
     @Test
     @DisplayName("포인트 충전/이용 내역 조회 API")
@@ -87,8 +95,8 @@ class PointControllerTest {
 
     /**
      * 포인트 충전 API 테스트
-     * 주어진 userId와 충전할 포인트를 사용하여 Mock 데이터를 설정하고, mockMvc 를 통해 API 엔드포인트를 호출하여
-     * 특정 유저의 포인트가 정확히 충전되는지 확인
+     * 주어진 userId와 충전할 포인트를 사용하여 Mock 데이터를 설정하고,
+     * MockMvc 를 통해 API 엔드포인트를 호출하여 반환된 JSON 배열 형식의 응답을 검증
      */
     @Test
     @DisplayName("포인트 충전 API")
@@ -113,8 +121,8 @@ class PointControllerTest {
 
     /**
      * 포인트 사용 API 테스트
-     * 주어진 userId와 사용할 포인트를 사용하여 Mock 데이터를 설정하고, mockMvc 를 통해 API 엔드포인트를 호출하여
-     * 특정 유저의 포인트가 정확히 사용되는지 확인
+     * 주어진 userId와 사용할 포인트를 사용하여 Mock 데이터를 설정하고,
+     * MockMvc 를 통해 API 엔드포인트를 호출하여 반환된 JSON 배열 형식의 응답을 검증
      */
     @Test
     @DisplayName("포인트 사용 API")
