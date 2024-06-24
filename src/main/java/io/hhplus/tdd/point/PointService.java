@@ -1,53 +1,84 @@
 package io.hhplus.tdd.point;
 
-import io.hhplus.tdd.database.PointHistoryTable;
-import io.hhplus.tdd.database.UserPointTable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
+@Service
 public class PointService {
 
     @Autowired
-    private PointHistoryTable pointHistoryTable;
+    private PointRepository pointRepository;
 
-    @Autowired
-    private UserPointTable userPointTable;
+    private final ConcurrentHashMap<Long, ReentrantLock> userLocks = new ConcurrentHashMap<>();
 
     /**
-     * TODO - 특정 유저의 포인트를 조회하는 기능을 작성해주세요.
+     * 특정 유저의 포인트 조회
      */
     public UserPoint getUserPoint(long id) {
-        return userPointTable.selectById(id);
+        return pointRepository.getUserPoint(id);
     }
 
     /**
-     * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
+     * 특정 유저의 포인트 충전/이용 내역 조회
      */
     public List<PointHistory> getUserPointHistory(long id) {
-        return pointHistoryTable.selectAllByUserId(id);
+        return pointRepository.getUserPointHistory(id);
     }
 
     /**
-     * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
+     * 특정 유저의 포인트 충전
      */
     public UserPoint chargePoint(long id, long amount) {
-        UserPoint user = userPointTable.selectById(id);
-        long originalPoint = user.point();
-        long updatedPoint = originalPoint + amount;
-        return userPointTable.insertOrUpdate(id, updatedPoint);
+        ReentrantLock lock = userLocks.computeIfAbsent(id, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            UserPoint user = pointRepository.getUserPoint(id);
+            long originalPoint = user.point();
+            long updatedPoint = originalPoint + amount;
+
+            UserPoint updatedUser = pointRepository.updateUserPoint(id, updatedPoint);
+
+            // updateUserPoint 가 성공했을 때만 insertUserPointHistory 호출
+            if (updatedUser != null) {
+                pointRepository.insertUserPointHistory(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
+            }
+
+            return updatedUser;
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
-     * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
+     * 특정 유저의 포인트 사용
      */
     public UserPoint usePoint(long id, long amount) {
-        UserPoint user = userPointTable.selectById(id);
-        long originalPoint = user.point();
-        if(originalPoint < amount) {
-            throw new IllegalArgumentException("Insufficient points");
+        ReentrantLock lock = userLocks.computeIfAbsent(id, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            UserPoint user = pointRepository.getUserPoint(id);
+            long originalPoint = user.point();
+
+            if (originalPoint < amount) {
+                throw new IllegalArgumentException("포인트가 부족합니다. 현재 포인트: " + originalPoint);
+            }
+
+            long updatedPoint = originalPoint - amount;
+
+            UserPoint updatedUser = pointRepository.updateUserPoint(id, updatedPoint);
+
+            // updateUserPoint 가 성공했을 때만 insertUserPointHistory 호출
+            if (updatedUser != null) {
+                pointRepository.insertUserPointHistory(id, amount, TransactionType.USE, System.currentTimeMillis());
+            }
+
+            return updatedUser;
+        } finally {
+            lock.unlock();
         }
-        long updatedPoint = originalPoint - amount;
-        return userPointTable.insertOrUpdate(id, updatedPoint);
     }
 }
